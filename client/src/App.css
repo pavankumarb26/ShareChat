@@ -8,7 +8,7 @@ scroll-behavior: smooth;
 }
 
 body {
-font-family: 'Open Sans', sans-serif;
+font-family:  'Open Sans', sans-serif;
 /* display: Glex;
 Glex-dinection: column;
 justify-content: center;
@@ -62,7 +62,7 @@ overflow-y: scroll;
 overflow-x: hidden;
 
 }
-
+ 
 .message-left,
 .message-right {
 list-style: none;

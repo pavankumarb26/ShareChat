@@ -5,6 +5,7 @@ import JoinRoom from "../components/JoinRoom";
 export default function Home({ onRoomJoined }) {
   const [page, setPage] = useState("");
 
+  
   const goHome = () => setPage("");
 
   if (page === "create") {
