@@ -1,5 +1,6 @@
 import { forwardRef, useRef, useEffect, useState } from "react";
 import moment from "moment";
+import Header from "./Header";
 
 async function copyToClipboard(text) {
   try {
@@ -84,108 +85,129 @@ const MessageList = forwardRef(
       setTimeout(() => setCopiedId((c) => (c === rowKey ? null : c)), 1500);
     };
 
-    return (
-      <ul className="message-container" ref={ref}>
-        {messages.map((msg, index) => {
-          const rawId = msg.document?._id ?? msg.documentId;
-          const fileId =
-            rawId != null && rawId !== "" ? String(rawId) : "";
-          const fileName = msg.document?.fileName || "file";
-          const mimeType = msg.document?.mimeType || "";
-          const isFile = msg.kind === "file" && fileId.length > 0;
-          const isImage =
-            isFile &&
-            (mimeType.startsWith("image/") ||
-              /\.(png|jpe?g|gif|webp)$/i.test(fileName));
-          const fileSrc = isFile
-            ? `${apiBase}/api/files/${encodeURIComponent(fileId)}?inline=1`
-            : "";
-          const downloadHref = isFile
-            ? `${apiBase}/api/files/${encodeURIComponent(fileId)}?original=${encodeURIComponent(fileName)}`
-            : "";
-          const key = msg._id != null ? String(msg._id) : `m-${index}`;
+return (
+  
+  <ul
+    ref={ref}
+    className="flex flex-col gap-2 p-3 h-[500px] overflow-y-auto bg-gray-100 rounded-xl"
+  >
+    {messages.map((msg, index) => {
+      const rawId = msg.document?._id ?? msg.documentId;
+      const fileId = rawId != null && rawId !== "" ? String(rawId) : "";
+      const fileName = msg.document?.fileName || "file";
+      const mimeType = msg.document?.mimeType || "";
 
-          const bubbleClass = [
-            msg.isOwn ? "message-right" : "message-left",
-            isImage ? "message-has-media" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
+      const isFile = msg.kind === "file" && fileId.length > 0;
 
-          return (
-            <li key={key} className={bubbleClass}>
-              <div className="message-row">
-                <div className="message-body">
-                  {isImage && (
-                    <img
-                      src={fileSrc}
-                      alt={fileName || "attachment"}
-                      className="message-file-preview"
-                      loading="lazy"
-                    />
-                  )}
-                  <p className="message">
-                    {!isFile && (
-                      <span className="message-text">{msg.message}</span>
-                    )}
-                    {isFile && (
-                      <>
-                        <span className="message-file-caption">
-                          {msg.message}
-                        </span>
-                        <a
-                          className="file-download"
-                          href={downloadHref}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Download: {fileName}
-                        </a>
-                      </>
-                    )}
-                    <span className="message-meta">
-                      {msg.name} • {moment(msg.dateTime).fromNow()}
-                    </span>
-                  </p>
-                </div>
-                <div className="message-actions">
-                  <button
-                    type="button"
-                    className="copy-msg-btn"
-                    title="Copy message"
-                    aria-label="Copy message"
-                    onClick={() => handleCopy(msg, key)}
+      const isImage =
+        isFile &&
+        (mimeType.startsWith("image/") ||
+          /\.(png|jpe?g|gif|webp)$/i.test(fileName));
+
+      const fileSrc = isFile
+        ? `${apiBase}/api/files/${encodeURIComponent(fileId)}?inline=1`
+        : "";
+
+      const downloadHref = isFile
+        ? `${apiBase}/api/files/${encodeURIComponent(fileId)}?original=${encodeURIComponent(fileName)}`
+        : "";
+
+      const key = msg._id != null ? String(msg._id) : `m-${index}`;
+
+      return (
+        <li
+          key={key}
+          className={`flex ${
+            msg.isOwn ? "justify-end" : "justify-start"
+          } px-2`}
+        >
+          <div className="flex gap-2 max-w-[80%]">
+
+            {/* Message Bubble */}
+            <div
+              className={`p-3 rounded-2xl shadow text-sm break-words ${
+                msg.isOwn
+                  ? "bg-black text-white rounded-br-none"
+                  : "bg-white text-black rounded-bl-none border"
+              }`}
+            >
+              {/* Image Preview */}
+              {isImage && (
+                <img
+                  src={fileSrc}
+                  alt={fileName || "attachment"}
+                  className="rounded-lg mb-2 max-h-60 w-full object-contain"
+                  loading="lazy"
+                />
+              )}
+
+              {/* Text Message */}
+              {!isFile && (
+                <span className="whitespace-pre-wrap">
+                  {msg.message}
+                </span>
+              )}
+
+              {/* File Message */}
+              {isFile && (
+                <div>
+                  <p className="mb-1">{msg.message}</p>
+                  <a
+                    href={downloadHref}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`text-sm underline ${
+                      msg.isOwn ? "text-blue-300" : "text-blue-600"
+                    }`}
                   >
-                    <CopyIcon />
-                    {copiedId === key ? " ✓" : ""}
-                  </button>
-                  {msg.isOwn && onDeleteMessage && (
-                    <button
-                      type="button"
-                      className="delete-msg-btn"
-                      title="Delete message"
-                      aria-label="Delete message"
-                      onClick={() => onDeleteMessage(msg._id)}
-                    >
-                      <TrashIcon />
-                    </button>
-                  )}
+                    Download: {fileName}
+                  </a>
                 </div>
+              )}
+
+              {/* Meta Info */}
+              <div className="text-[10px] mt-1 opacity-70">
+                {msg.name} • {moment(msg.dateTime).fromNow()}
               </div>
-            </li>
-          );
-        })}
+            </div>
 
-        {feedback && (
-          <li className="message-feedback">
-            <p className="feedback">{feedback}</p>
-          </li>
-        )}
+            {/* Actions */}
+            <div className="flex flex-col gap-1 text-xs">
+              <button
+                onClick={() => handleCopy(msg, key)}
+                className="bg-gray-100 px-2 py-1 rounded hover:bg-gray-200"
+              >
+                <CopyIcon />
+                {copiedId === key && " ✓"}
+              </button>
 
-        <div ref={bottomRef}></div>
-      </ul>
-    );
+              {msg.isOwn && onDeleteMessage && (
+                <button
+                  onClick={() => onDeleteMessage(msg._id)}
+                  className="bg-red-100 px-2 py-1 rounded hover:bg-red-200"
+                >
+                  <TrashIcon />
+                </button>
+              )}
+            </div>
+
+          </div>
+        </li>
+      );
+    })}
+
+    {/* Typing Feedback */}
+    {feedback && (
+      <li className="text-center text-sm text-gray-500 italic">
+        {feedback}
+      </li>
+    )}
+
+    {/* Auto Scroll Anchor */}
+    <div ref={bottomRef}></div>
+  </ul>
+);
   }
 );
 

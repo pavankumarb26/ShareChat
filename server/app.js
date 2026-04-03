@@ -125,24 +125,43 @@ app.get("/api/files/:documentId", async (req, res) => {
 let socketsConnected = new Set();
 const users = {}; // store name + room per socket
 
+function emitRoomUsers(room) {
+  const roomUsers = Object.values(users)
+    .filter((u) => u.room === room)
+    .map((u) => ({ name: u.name }));
+
+  io.to(room).emit("active-users", roomUsers);
+}
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
   socketsConnected.add(socket.id);
   io.emit("clients-total", socketsConnected.size);
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-    socketsConnected.delete(socket.id);
-    delete users[socket.id];
-    io.emit("clients-total", socketsConnected.size);
-  });
+socket.on("disconnect", () => {
+  console.log("User disconnected:", socket.id);
 
-  socket.on("leave-room", ({ password }) => {
-    const cleanPass = password?.trim().toLowerCase();
-    if (!cleanPass) return;
-    socket.leave(cleanPass);
-    delete users[socket.id];
-  });
+  const user = users[socket.id];
+
+  socketsConnected.delete(socket.id);
+  delete users[socket.id];
+
+  io.emit("clients-total", socketsConnected.size);
+
+  if (user?.room) {
+    emitRoomUsers(user.room);
+  }
+});
+
+socket.on("leave-room", ({ password }) => {
+  const cleanPass = password?.trim().toLowerCase();
+  if (!cleanPass) return;
+
+  socket.leave(cleanPass);
+  delete users[socket.id];
+
+  emitRoomUsers(cleanPass);
+});
 
   socket.on("create-room", async ({ password }) => {
     try {
@@ -183,6 +202,7 @@ io.on("connection", (socket) => {
       users[socket.id] = { name: name?.trim() || "Anonymous", room: cleanPass };
 
       socket.join(cleanPass);
+      emitRoomUsers(cleanPass);
       const messagesRaw = await Message.find({ roomId: cleanPass })
         .sort({ dateTime: 1 })
         .populate("documentId", "fileName mimeType fileSize")
