@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const Message = require("../models/messageSchema");
+const Room = require("../models/roomSchema");
 
 const connectDB = async () => {
   try {
@@ -19,6 +21,12 @@ const connectDB = async () => {
 
     // Ensure password is the unique room identifier.
     await rooms.createIndex({ password: 1 }, { unique: true });
+
+    // ✅ Force recreate TTL indexes from schema
+    await Message.syncIndexes();
+    await Room.syncIndexes();
+    console.log("Indexes synced ✅");
+
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
     process.exit(1);
