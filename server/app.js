@@ -45,7 +45,7 @@ const server = app.listen(process.env.PORT || 3000, () => {
 });
 
 const io = require("socket.io")(server, {
-  cors: { origin: "chatrooms-production-4802.up.railway.app", methods: ["GET", "POST"] },
+  cors: { origin: "https://chat-rooms-seven-gold.vercel.app", methods: ["GET", "POST"] },
 });
 
 app.post("/api/upload", handleMulterUpload, async (req, res) => {
