@@ -55,7 +55,11 @@ export default function ChatInput({
       if (!res.ok) throw new Error(data.error || "Upload failed");
       if (caption) setInput("");
     } catch (err) {
-      alert(err.message || "Upload failed");
+      const fallback =
+        err?.message === "Failed to fetch"
+          ? "Upload failed: backend unreachable or blocked by CORS. Check server URL and CORS settings."
+          : err?.message || "Upload failed";
+      alert(fallback);
     } finally {
       setUploading(false);
     }

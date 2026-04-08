@@ -37,7 +37,23 @@ function handleMulterUpload(req, res, next) {
 
 const app = express();
 
-app.use(cors({ origin: "chatrooms-production-4802.up.railway.app", credentials: true }));
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://chat-rooms-seven-gold.vercel.app",
+  "https://chatrooms-production-4802.up.railway.app",
+]);
+
+const corsOptions = {
+  origin(origin, cb) {
+    if (!origin || allowedOrigins.has(origin)) return cb(null, true);
+    return cb(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("/(.*)", cors(corsOptions));// ✅ properly responds to ALL preflight requests
 app.use(express.json());
 
 const server = app.listen(process.env.PORT || 3000, () => {
@@ -45,7 +61,11 @@ const server = app.listen(process.env.PORT || 3000, () => {
 });
 
 const io = require("socket.io")(server, {
-  cors: { origin: "https://chat-rooms-seven-gold.vercel.app", methods: ["GET", "POST"] },
+  cors: {
+    origin: [...allowedOrigins],
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 app.post("/api/upload", handleMulterUpload, async (req, res) => {
@@ -102,23 +122,29 @@ app.post("/api/upload", handleMulterUpload, async (req, res) => {
 
 app.get("/api/files/:documentId", async (req, res) => {
   try {
-    const doc = await Document.findById(req.params.documentId).lean();
+    const doc = await Document.findById(req.params.documentId);
+
     if (!doc || !doc.fileData) {
-      return res.status(404).end();
+      return res.status(404).send("File not found");
     }
 
-    const original = String(req.query.original || doc.fileName || "download");
-    const inline = req.query.inline === "1";
+    const fileBuffer = Buffer.isBuffer(doc.fileData)
+      ? doc.fileData
+      : Buffer.from(doc.fileData);
+    const wantsDownload = "original" in req.query;
 
-    res.setHeader("Content-Type", doc.mimeType || "application/octet-stream");
-    const dispo = inline ? "inline" : "attachment";
-    res.setHeader(
-      "Content-Disposition",
-      `${dispo}; filename="${encodeURIComponent(original)}"`
-    );
-    return res.send(doc.fileData);
-  } catch (_err) {
-    return res.status(404).end();
+    res.set({
+      "Content-Type": doc.mimeType || "application/pdf",
+      "Content-Length": fileBuffer.length,
+      "Content-Disposition": `${
+        wantsDownload ? "attachment" : "inline"
+      }; filename="${doc.fileName}"`,
+    });
+
+    return res.end(fileBuffer);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Error loading file");
   }
 });
 
